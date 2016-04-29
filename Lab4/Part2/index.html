@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>Choropleth Map</title>
+	<link rel="stylesheet" href="packages/jquery-ui.css">
+	<script src="packages/jquery-1.10.2.js"></script>
+	<script src="packages/jquery-ui.js"></script>
+	<script src="packages/jscolor.js"></script>
+	<script>
+	function loadMap() {
+	var width = 960,
+    height = 500,
+    centered;
+
+var rateById = {};
+
+var color = d3.scale.threshold()
+    .domain([document.getElementById("text1").value, document.getElementById("text2").value, document.getElementById("text3").value, document.getElementById("text4").value, document.getElementById("text5").value])
+    .range([getCSSRule('.q0-9').style.fill, getCSSRule('.q1-9').style.fill, getCSSRule('.q2-9').style.fill, getCSSRule('.q3-9').style.fill, getCSSRule('.q4-9').style.fill, getCSSRule('.q5-9').style.fill]);
+
+var path = d3.geo.path();
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+queue()
+    .defer(d3.json, "us.json")
+    .defer(d3.tsv, "unemployment.tsv")
+    .await(ready);
+
+function ready(error, us, unemployment) {
+  if (error) throw error;
+
+  var rateById = {};
+  
+  var g = svg.append("g");
+
+  unemployment.forEach(function(d) { rateById[d.id] = +d.rate; });
+
+  g
+      .attr("class", "counties")
+    .selectAll("path")
+      .data(topojson.feature(us, us.objects.counties).features)
+    .enter().append("path")
+      .attr("d", path)
+      .style("fill", function(d) { return color(rateById[d.id]); });
+
+  g.append("g")
+      .attr("id", "states")
+    .selectAll("path")
+      .data(topojson.feature(us, us.objects.states).features)
+    .enter().append("path")
+      .attr("d", path)
+	  .on("click", clicked);
+	  
+  svg.append("path")
+      .datum(topojson.mesh(us, us.objects.states, function(a, b) { return a.id !== b.id; }))
+      .attr("class", "states")
+      .attr("d", path);
+}
+
+function clicked(d) {
+  var x, y, k;
+
+  if (d && centered !== d) {
+    var centroid = path.centroid(d);
+    x = centroid[0];
+    y = centroid[1];
+    k = 4;
+    centered = d;
+  } else {
+    x = width / 2;
+    y = height / 2;
+    k = 1;
+    centered = null;
+  }
+
+  svg.selectAll("path")
+      .classed("active", centered && function(d) { return d === centered; });
+
+  svg.transition()
+      .duration(750)
+      .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")scale(" + k + ")translate(" + -x + "," + -y + ")")
+      .style("stroke-width", 1.5 / k + "px");
+}
+}	
+	</script>
+</head>
+<body>
+
+Threashold: <input type="text" id="text1" value="0.02">
+Threashold: <input type="text" id="text2" value="0.04">
+Threashold: <input type="text" id="text3" value="0.06">
+Threashold: <input type="text" id="text4" value="0.08">
+Threashold: <input type="text" id="text5" value="0.10">
+<hr />
+
+<button id="color-button1">Choose Color</button>
+<button id="color-button2">Choose Color</button>
+<button id="color-button3">Choose Color</button>
+<button id="color-button4">Choose Color</button>
+<button id="color-button5">Choose Color</button>
+<button id="color-button6">Choose Color</button>
+<hr />
+
+<button id="generate-button" onclick="loadMap()">Generate</button>
+<hr />
+
+<script>
+	var options = {
+		valueElement: null,
+		width: 300,
+		height: 120,
+		sliderSize: 20,
+		borderColor: '#CCC',
+	};
+	var pickers = {};
+
+	pickers.color1 = new jscolor('color-button1', options);
+	pickers.color1.onFineChange = "update('color1')";
+	pickers.color1.fromString('f2f0f7');
+
+	pickers.color2 = new jscolor('color-button2', options);
+	pickers.color2.onFineChange = "update('color2')";
+	pickers.color2.fromString('dadaeb');
+	
+	pickers.color3 = new jscolor('color-button3', options);
+	pickers.color3.onFineChange = "update('color3')";
+	pickers.color3.fromString('bcbddc');
+	
+	pickers.color4 = new jscolor('color-button4', options);
+	pickers.color4.onFineChange = "update('color4')";
+	pickers.color4.fromString('9e9ac8');
+	
+	pickers.color5 = new jscolor('color-button5', options);
+	pickers.color5.onFineChange = "update('color5')";
+	pickers.color5.fromString('756bb1');
+	
+	pickers.color6 = new jscolor('color-button6', options);
+	pickers.color6.onFineChange = "update('color6')";
+	pickers.color6.fromString('54278f');
+	
+
+	function getCSSRule(ruleName, deleteFlag) {               // Return requested style obejct
+		ruleName=ruleName.toLowerCase();                       // Convert test string to lower case.
+		if (document.styleSheets) {                            // If browser can play with stylesheets
+			for (var i=0; i<document.styleSheets.length; i++) { // For each stylesheet
+				var styleSheet=document.styleSheets[i];          // Get the current Stylesheet
+				var ii=0;                                        // Initialize subCounter.
+				var cssRule=false;                               // Initialize cssRule. 
+				do {                                             // For each rule in stylesheet
+					if (styleSheet.cssRules) {                    // Browser uses cssRules?
+						cssRule = styleSheet.cssRules[ii];         // Yes --Mozilla Style
+					} else {                                      // Browser usses rules?
+						cssRule = styleSheet.rules[ii];            // Yes IE style. 
+					}                                             // End IE check.
+					if (cssRule)  {                               // If we found a rule...
+						if (cssRule.selectorText.toLowerCase()==ruleName) { //  match ruleName?
+							if (deleteFlag=='delete') {             // Yes.  Are we deleteing?
+								if (styleSheet.cssRules) {           // Yes, deleting...
+									styleSheet.deleteRule(ii);        // Delete rule, Moz Style
+								} else {                             // Still deleting.
+									styleSheet.removeRule(ii);        // Delete rule IE style.
+								}                                    // End IE check.
+								return true;                         // return true, class deleted.
+							} else {                                // found and not deleting.
+								return cssRule;                      // return the style object.
+							}                                       // End delete Check
+						}                                          // End found rule name
+					}                                             // end found cssRule
+					ii++;                                         // Increment sub-counter
+				} while (cssRule)                                // end While loop
+			}                                                   // end For loop
+		}                                                      // end styleSheet ability check
+		return false;                                          // we found NOTHING!
+	}                                                         // end getCSSRule 
+
+	function killCSSRule(ruleName) {                          // Delete a CSS rule   
+		return getCSSRule(ruleName,'delete');                  // just call getCSSRule w/delete flag.
+	}                                                         // end killCSSRule
+
+	function addCSSRule(ruleName) {                           // Create a new css rule
+		if (document.styleSheets) {                            // Can browser do styleSheets?
+			if (!getCSSRule(ruleName)) {                        // if rule doesn't exist...
+				if (document.styleSheets[0].addRule) {           // Browser is IE?
+					document.styleSheets[0].addRule(ruleName, null,0);      // Yes, add IE style
+				} else {                                         // Browser is IE?
+					document.styleSheets[0].insertRule(ruleName+' { }', 0); // Yes, add Moz style.
+				}                                                // End browser check
+			}                                                   // End already exist check.
+		}                                                      // End browser ability check.
+		return getCSSRule(ruleName);                           // return rule we just created.
+	} 
+	
+	function update () {
+		
+		var q0 = getCSSRule('.q0-9');
+		q0.style.fill = pickers.color1.toRGBString();
+		
+		var q1 = getCSSRule('.q1-9');
+		q1.style.fill = pickers.color2.toRGBString();
+		
+		var q2 = getCSSRule('.q2-9');
+		q2.style.fill = pickers.color3.toRGBString();
+		
+		var q3 = getCSSRule('.q3-9');
+		q3.style.fill = pickers.color4.toRGBString();
+		
+		var q4 = getCSSRule('.q4-9');
+		q4.style.fill = pickers.color5.toRGBString();
+		
+		var q5 = getCSSRule('.q5-9');
+		q5.style.fill = pickers.color6.toRGBString();
+		
+	}
+			
+	update();
+</script>
+
+
+</body>
+<style>
+
+.q0-9 { fill:rgb(242,240,247); }
+.q1-9 { fill:rgb(218,218,235); }
+.q2-9 { fill:rgb(188,189,220); }
+.q3-9 { fill:rgb(158,154,200); }
+.q4-9 { fill:rgb(117,107,177); }
+.q5-9 { fill:rgb(84,39,143); }
+
+.counties {
+  fill: none;
+}
+
+.states {
+  fill: none;
+  stroke: #fff;
+  stroke-linejoin: round;
+}
+
+.background {
+  fill: none;
+  pointer-events: all;
+}
+
+#state-borders {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 1.5px;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+#states {
+  fill: #aaa;
+  opacity: 0;
+}
+
+#states .active {
+  fill: orange;
+}
+
+</style>
+<script type="text/javascript" src="packages/d3.v3.js"></script>
+<script type="text/javascript" src="packages/topojson.v1.min.js"></script>
+<script type="text/javascript" src="packages/queue.v1.min.js"></script>
+<script src="//code.jquery.com/jquery-1.10.2.js"></script>
+<script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+<script>
+
+var width = 960,
+    height = 500,
+    centered;
+
+var rateById = {};
+
+var color = d3.scale.threshold()
+    .domain([document.getElementById("text1").value, document.getElementById("text2").value, document.getElementById("text3").value, document.getElementById("text4").value, document.getElementById("text5").value])
+    .range([getCSSRule('.q0-9').style.fill, getCSSRule('.q1-9').style.fill, getCSSRule('.q2-9').style.fill, getCSSRule('.q3-9').style.fill, getCSSRule('.q4-9').style.fill, getCSSRule('.q5-9').style.fill]);
+
+var path = d3.geo.path();
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+queue()
+    .defer(d3.json, "us.json")
+    .defer(d3.tsv, "unemployment.tsv")
+    .await(ready);
+
+function ready(error, us, unemployment) {
+  if (error) throw error;
+
+  var rateById = {};
+  
+  var g = svg.append("g");
+
+  unemployment.forEach(function(d) { rateById[d.id] = +d.rate; });
+
+  g
+      .attr("class", "counties")
+    .selectAll("path")
+      .data(topojson.feature(us, us.objects.counties).features)
+    .enter().append("path")
+      .attr("d", path)
+      .style("fill", function(d) { return color(rateById[d.id]); });
+
+  g.append("g")
+      .attr("id", "states")
+    .selectAll("path")
+      .data(topojson.feature(us, us.objects.states).features)
+    .enter().append("path")
+      .attr("d", path)
+	  .on("click", clicked);
+	  
+  svg.append("path")
+      .datum(topojson.mesh(us, us.objects.states, function(a, b) { return a.id !== b.id; }))
+      .attr("class", "states")
+      .attr("d", path);
+}
+
+function clicked(d) {
+  var x, y, k;
+
+  if (d && centered !== d) {
+    var centroid = path.centroid(d);
+    x = centroid[0];
+    y = centroid[1];
+    k = 4;
+    centered = d;
+  } else {
+    x = width / 2;
+    y = height / 2;
+    k = 1;
+    centered = null;
+  }
+
+  svg.selectAll("path")
+      .classed("active", centered && function(d) { return d === centered; });
+
+  svg.transition()
+      .duration(750)
+      .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")scale(" + k + ")translate(" + -x + "," + -y + ")")
+      .style("stroke-width", 1.5 / k + "px");
+}	
+
+</script>
